@@ -6,12 +6,18 @@ import TicketDetail from './components/TicketDetail';
 import CreateTicketModal from './components/CreateTicketModal';
 import AdminPanel from './components/AdminPanel';
 import AssetManager from './components/AssetManager';
+import TabelaClientes from './components/TabelaClientes';
+import TabelaSolicitantes from './components/TabelaSolicitantes';
+import TabelaAtivos from './components/TabelaAtivos';
+import TabelaChamados from './components/TabelaChamados';
+import FormCliente from './components/FormCliente';
+import FormChamado from './components/FormChamado';
 import Login from './components/Login';
 import { User, Ticket, TicketStatus } from './types';
 import { api } from './api';
 
 type FilterType = 'OPEN' | 'IN_PROGRESS' | 'WAITING' | 'CLOSED' | 'ALL';
-type ViewType = 'dashboard' | 'tickets' | 'admin' | 'assets';
+type ViewType = 'dashboard' | 'tickets' | 'admin' | 'assets' | 'clients' | 'requesters' | 'external_assets' | 'external_tickets';
 
 const App: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -23,6 +29,8 @@ const App: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('OPEN');
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [clientsRefreshKey, setClientsRefreshKey] = useState(0);
+  const [externalTicketsRefreshKey, setExternalTicketsRefreshKey] = useState(0);
 
   useEffect(() => {
     const init = async () => {
@@ -78,7 +86,11 @@ const App: React.FC = () => {
       dashboard: p.canViewDashboard,
       tickets: p.canViewTickets,
       assets: p.canViewAssets,
-      admin: p.canViewAdmin
+      admin: p.canViewAdmin,
+      clients: p.canViewClients,
+      requesters: p.canViewRequesters,
+      external_assets: p.canViewExternalAssets,
+      external_tickets: p.canViewExternalTickets
     };
 
     if (!accessMap[currentView]) {
@@ -164,8 +176,12 @@ const App: React.FC = () => {
           <div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
               {currentView === 'dashboard' ? 'Visão Geral' : 
-               currentView === 'tickets' ? 'Central de Chamados' : 
-               currentView === 'assets' ? 'Gestão de Inventário' : 'Administração'}
+               currentView === 'tickets' ? 'Chamados Locais' : 
+               currentView === 'external_tickets' ? 'Base PostgreSQL' : 
+               currentView === 'assets' ? 'Inventário Local' : 
+               currentView === 'external_assets' ? 'Ativos Corporativos' : 
+               currentView === 'clients' ? 'Base de Clientes' : 
+               currentView === 'requesters' ? 'Base de Solicitantes' : 'Administração'}
             </h1>
             <p className="text-slate-500 text-sm mt-1">Bem-vindo, {currentUser.name}.</p>
           </div>
@@ -218,7 +234,34 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {currentView === 'external_tickets' && currentUser.permissions.canViewExternalTickets && (
+           <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <FormChamado onSuccess={() => setExternalTicketsRefreshKey(k => k + 1)} />
+            <TabelaChamados key={externalTicketsRefreshKey} />
+          </div>
+        )}
+
         {currentView === 'assets' && currentUser.permissions.canViewAssets && <AssetManager />}
+        
+        {currentView === 'external_assets' && currentUser.permissions.canViewExternalAssets && (
+          <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <TabelaAtivos />
+          </div>
+        )}
+
+        {currentView === 'clients' && currentUser.permissions.canViewClients && (
+          <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <FormCliente onSuccess={() => setClientsRefreshKey(k => k + 1)} />
+            <TabelaClientes key={clientsRefreshKey} />
+          </div>
+        )}
+
+        {currentView === 'requesters' && currentUser.permissions.canViewRequesters && (
+          <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
+            <TabelaSolicitantes />
+          </div>
+        )}
+
         {currentView === 'admin' && currentUser.permissions.canViewAdmin && (
           <AdminPanel currentUser={currentUser} onUpdate={refreshUser} />
         )}

@@ -15,7 +15,11 @@ export const INITIAL_USERS: User[] = [
       canViewDashboard: true,
       canViewTickets: true,
       canViewAssets: true,
-      canViewAdmin: true
+      canViewAdmin: true,
+      canViewClients: true,
+      canViewRequesters: true,
+      canViewExternalAssets: true,
+      canViewExternalTickets: true
     }
   },
   {
@@ -30,7 +34,11 @@ export const INITIAL_USERS: User[] = [
       canViewDashboard: true,
       canViewTickets: true,
       canViewAssets: true,
-      canViewAdmin: false
+      canViewAdmin: false,
+      canViewClients: true,
+      canViewRequesters: true,
+      canViewExternalAssets: true,
+      canViewExternalTickets: true
     }
   },
   {
@@ -45,7 +53,11 @@ export const INITIAL_USERS: User[] = [
       canViewDashboard: true,
       canViewTickets: true,
       canViewAssets: false,
-      canViewAdmin: false
+      canViewAdmin: false,
+      canViewClients: false,
+      canViewRequesters: false,
+      canViewExternalAssets: false,
+      canViewExternalTickets: false
     }
   }
 ];

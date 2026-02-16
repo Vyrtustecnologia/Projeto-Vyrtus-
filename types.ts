@@ -41,6 +41,10 @@ export interface User {
     canViewTickets: boolean;
     canViewAssets: boolean;
     canViewAdmin: boolean;
+    canViewClients: boolean;
+    canViewRequesters: boolean;
+    canViewExternalAssets: boolean;
+    canViewExternalTickets: boolean;
   };
 }
 
