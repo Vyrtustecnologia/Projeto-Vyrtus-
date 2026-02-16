@@ -52,6 +52,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticket: initialTicket, curr
   }, []);
 
   const handleSaveUpdate = async () => {
+    if (!editedTitle.trim() || submitting) return;
     setSubmitting(true);
     try {
       const updated = await api.tickets.update(ticket.id, {
@@ -100,7 +101,6 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticket: initialTicket, curr
   };
 
   const canEdit = currentUser.role === 'ADMIN' || currentUser.permissions.canEditAllFields;
-  const currentClient = INITIAL_CLIENTS.find(c => c.id === ticket.clientId);
   const availableAssets = allAssets.filter(a => a.clientId === ticket.clientId);
   const linkedAssets = allAssets.filter(a => ticket.assetIds?.includes(a.id));
 
@@ -113,43 +113,71 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticket: initialTicket, curr
   }, [availableAssets, assetSearch]);
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-end z-50">
-      <div className="bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-4">
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex justify-end z-[60]">
+      <div className="bg-white w-full md:max-w-2xl h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+        <div className="p-4 md:p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+          <div className="flex items-center gap-3">
             <button onClick={onClose} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
               <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
             </button>
             <div>
-              <h2 className="text-xl font-bold text-slate-800">#{ticket.id}</h2>
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Última alteração por: {ticket.lastUpdatedByName}</p>
+              <h2 className="text-lg md:text-xl font-bold text-slate-800">#{ticket.id}</h2>
+              <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider truncate max-w-[150px]">Modificado por: {ticket.lastUpdatedByName}</p>
             </div>
           </div>
           <div className="flex gap-2">
-            {canEdit && !isEditing && <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-vyrtus text-white rounded-lg text-xs font-bold">Editar</button>}
+            {canEdit && !isEditing && (
+              <button 
+                onClick={() => setIsEditing(true)} 
+                className="px-3 py-1.5 bg-vyrtus text-white rounded-lg text-xs font-bold"
+              >
+                Editar
+              </button>
+            )}
             {isEditing && (
               <>
-                <button onClick={() => setIsEditing(false)} className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">Cancelar</button>
-                <button onClick={handleSaveUpdate} disabled={submitting} className="px-4 py-2 bg-green-600 text-white rounded-lg text-xs font-bold">{submitting ? 'Salvando...' : 'Salvar'}</button>
+                <button 
+                  onClick={() => setIsEditing(false)} 
+                  className="px-3 py-1.5 bg-slate-200 text-slate-700 rounded-lg text-xs font-bold"
+                >
+                  <span className="hidden sm:inline">Cancelar</span>
+                  <span className="sm:hidden">✕</span>
+                </button>
+                <button 
+                  onClick={handleSaveUpdate} 
+                  disabled={submitting} 
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold"
+                >
+                  {submitting ? '...' : 'Salvar'}
+                </button>
               </>
             )}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-8">
           {isEditing ? (
              <div className="space-y-4">
-                <input type="text" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} className="w-full px-4 py-2 border rounded-lg" />
-                <div className="grid grid-cols-2 gap-4">
-                   <select value={editedStatus} onChange={(e) => setEditedStatus(e.target.value as TicketStatus)} className="w-full px-4 py-2 border rounded-lg">
-                      {Object.values(TicketStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                   </select>
-                   <select value={editedType} onChange={(e) => setEditedType(e.target.value as DemandType)} className="w-full px-4 py-2 border rounded-lg">
-                      {Object.values(DemandType).map(t => <option key={t} value={t}>{t}</option>)}
-                   </select>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Título</label>
+                  <input type="text" value={editedTitle} onChange={(e) => setEditedTitle(e.target.value)} className="w-full px-4 py-2 border rounded-lg" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Status</label>
+                     <select value={editedStatus} onChange={(e) => setEditedStatus(e.target.value as TicketStatus)} className="w-full px-4 py-2 border rounded-lg">
+                        {Object.values(TicketStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                     </select>
+                   </div>
+                   <div>
+                     <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tipo</label>
+                     <select value={editedType} onChange={(e) => setEditedType(e.target.value as DemandType)} className="w-full px-4 py-2 border rounded-lg">
+                        {Object.values(DemandType).map(t => <option key={t} value={t}>{t}</option>)}
+                     </select>
+                   </div>
                 </div>
                 <div className="relative" ref={dropdownRef}>
-                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Editar Ativos</label>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ativos</label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {editedAssetIds.map(id => (
                       <span key={id} className="px-2 py-1 bg-vyrtus-light text-vyrtus text-[10px] font-bold rounded flex items-center gap-1">
@@ -157,7 +185,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticket: initialTicket, curr
                       </span>
                     ))}
                   </div>
-                  <input type="text" placeholder="Buscar..." value={assetSearch} onChange={(e) => { setAssetSearch(e.target.value); setIsAssetDropdownOpen(true); }} onFocus={() => setIsAssetDropdownOpen(true)} className="w-full px-4 py-2 border rounded-lg" />
+                  <input type="text" placeholder="Pesquisar ativos..." value={assetSearch} onChange={(e) => { setAssetSearch(e.target.value); setIsAssetDropdownOpen(true); }} onFocus={() => setIsAssetDropdownOpen(true)} className="w-full px-4 py-2 border rounded-lg" />
                   {isAssetDropdownOpen && (
                     <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-40 overflow-auto">
                       {filteredDropdownAssets.map(a => (
@@ -169,42 +197,71 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ ticket: initialTicket, curr
              </div>
           ) : (
              <div className="space-y-4">
-                <h3 className="text-2xl font-bold text-slate-900">{ticket.title}</h3>
-                <p className="text-slate-600">{ticket.description}</p>
-                <div className="grid grid-cols-2 gap-4">
-                   <div className={`p-3 rounded-lg text-xs font-bold ${STATUS_COLORS[ticket.status as TicketStatus]}`}>{ticket.status}</div>
-                   <div className="p-3 bg-slate-100 rounded-lg text-xs font-bold border">{ticket.label}</div>
+                <h3 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">{ticket.title}</h3>
+                <p className="text-sm md:text-base text-slate-600 whitespace-pre-wrap">{ticket.description}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                   <div className={`p-3 rounded-lg text-xs font-bold text-center ${STATUS_COLORS[ticket.status as TicketStatus]}`}>{ticket.status}</div>
+                   <div className="p-3 bg-slate-100 rounded-lg text-xs font-bold text-center border">{ticket.label}</div>
                 </div>
                 {linkedAssets.length > 0 && (
                    <div className="bg-vyrtus-light p-4 rounded-xl">
-                      <h4 className="text-[10px] font-bold text-vyrtus uppercase mb-2">Ativos Vinculados</h4>
-                      <div className="space-y-1">
-                        {linkedAssets.map(a => <div key={a.id} className="text-xs text-slate-700 font-bold">{a.id} - {a.type} ({a.brand})</div>)}
+                      <h4 className="text-[10px] font-bold text-vyrtus uppercase mb-2">Equipamentos Vinculados</h4>
+                      <div className="space-y-2">
+                        {linkedAssets.map(a => (
+                          <div key={a.id} className="flex justify-between items-center bg-white/50 p-2 rounded border border-vyrtus/10">
+                            <span className="text-xs text-slate-700 font-bold">{a.id}</span>
+                            <span className="text-[10px] text-slate-500">{a.brand} {a.model}</span>
+                          </div>
+                        ))}
                       </div>
                    </div>
                 )}
              </div>
           )}
 
-          <div className="pt-6 border-t">
-             <h4 className="text-xs font-bold text-slate-800 uppercase mb-4 tracking-widest">Histórico de Atividades</h4>
+          <div className="pt-6 border-t border-slate-100">
+             <h4 className="text-[10px] font-bold text-slate-400 uppercase mb-6 tracking-widest">Linha do Tempo</h4>
              <div className="space-y-6">
-                {activities.map(act => (
-                   <div key={act.id} className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold">{act.authorName.charAt(0)}</div>
-                      <div>
-                         <div className="flex items-center gap-2"><span className="text-sm font-bold">{act.authorName}</span><span className="text-[10px] text-slate-400">{new Date(act.createdAt).toLocaleString()}</span></div>
-                         <div className="text-sm text-slate-600">{act.content}</div>
-                      </div>
-                   </div>
-                ))}
+                {activities.length === 0 ? (
+                  <p className="text-center text-xs text-slate-400 py-4">Início do histórico do chamado.</p>
+                ) : (
+                  activities.map(act => (
+                    <div key={act.id} className="flex gap-3">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold">
+                          {act.authorName.charAt(0)}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold text-slate-800">{act.authorName}</span>
+                            <span className="text-[9px] text-slate-400">{new Date(act.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                            {act.content}
+                          </div>
+                        </div>
+                    </div>
+                  ))
+                )}
              </div>
           </div>
         </div>
 
-        <div className="p-6 border-t bg-slate-50 flex gap-3">
-          <input type="text" placeholder="Escreva uma atualização..." value={newComment} onChange={(e) => setNewComment(e.target.value)} className="flex-1 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-vyrtus" />
-          <button onClick={handleAddComment} disabled={submitting} className="px-6 py-2 bg-vyrtus text-white rounded-lg font-bold">Enviar</button>
+        <div className="p-4 border-t bg-slate-50 flex gap-2">
+          <input 
+            type="text" 
+            placeholder="Nova atividade..." 
+            value={newComment} 
+            onChange={(e) => setNewComment(e.target.value)} 
+            className="flex-1 px-4 py-2 border rounded-lg outline-none focus:ring-2 focus:ring-vyrtus text-sm"
+            onKeyPress={(e) => e.key === 'Enter' && handleAddComment()}
+          />
+          <button 
+            onClick={handleAddComment} 
+            disabled={submitting} 
+            className="px-4 md:px-6 py-2 bg-vyrtus text-white rounded-lg font-bold text-sm"
+          >
+            {submitting ? '...' : 'OK'}
+          </button>
         </div>
       </div>
     </div>

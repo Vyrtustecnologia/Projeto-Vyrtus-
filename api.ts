@@ -3,14 +3,12 @@ import { Ticket, User, Activity, Asset, TicketStatus, LabelType, DemandType } fr
 import { INITIAL_USERS, INITIAL_ASSETS, INITIAL_CLIENTS } from './constants';
 import { DB_CONFIG } from './database_info';
 
-// Simula a URL do seu futuro backend que fará a ponte com o Postgres
-const API_BASE_URL = 'http://192.168.0.21:3000/api'; 
-
 const KEYS = {
   TICKETS: 'vyrtus_tickets',
   USERS: 'vyrtus_users',
   ACTIVITIES: 'vyrtus_activities',
   ASSETS: 'vyrtus_assets',
+  SESSION: 'vyrtus_session_user'
 };
 
 const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
@@ -22,18 +20,35 @@ const storage = {
   },
   set: <T>(key: string, value: T): void => {
     localStorage.setItem(key, JSON.stringify(value));
+  },
+  remove: (key: string): void => {
+    localStorage.removeItem(key);
   }
 };
 
-/**
- * Esta camada de API está preparada para ser substituída por chamadas fetch.
- * Os campos foram mapeados para bater com o schema PostgreSQL fornecido.
- */
 export const api = {
+  auth: {
+    login: async (email: string): Promise<User> => {
+      await delay(800);
+      const users = storage.get<User[]>(KEYS.USERS, INITIAL_USERS);
+      const user = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      
+      if (!user) throw new Error("Usuário não cadastrado no sistema Vyrtus.");
+      
+      storage.set(KEYS.SESSION, user);
+      return user;
+    },
+    logout: () => {
+      storage.remove(KEYS.SESSION);
+    },
+    getCurrentSession: (): User | null => {
+      return storage.get<User | null>(KEYS.SESSION, null);
+    }
+  },
+
   users: {
     getAll: async (): Promise<User[]> => {
       await delay();
-      // Futuro: return fetch(`${API_BASE_URL}/users`).then(r => r.json());
       return storage.get<User[]>(KEYS.USERS, INITIAL_USERS);
     },
     update: async (id: string, updates: Partial<User>): Promise<User> => {
@@ -45,6 +60,13 @@ export const api = {
       const updatedUser = { ...users[index], ...updates };
       users[index] = updatedUser;
       storage.set(KEYS.USERS, users);
+      
+      // Se o usuário atual for o mesmo que foi editado, atualiza a sessão
+      const session = api.auth.getCurrentSession();
+      if (session && session.id === id) {
+        storage.set(KEYS.SESSION, updatedUser);
+      }
+      
       return updatedUser;
     }
   },
@@ -59,27 +81,9 @@ export const api = {
       await delay();
       const tickets = storage.get<Ticket[]>(KEYS.TICKETS, []);
       
-      /**
-       * MAPEAMENTO PARA POSTGRESQL (tabela chamado)
-       * Aqui simulamos como os dados seriam preparados para o INSERT no banco
-       */
-      const pgData = {
-        titulo: formData.title,
-        cliente_id: formData.clientId,
-        solicitante_id: formData.requesterName, // Idealmente seria um ID numérico no futuro
-        ativo_id: formData.assetIds[0] || null, // No Postgres singular conforme solicitado
-        topico_id: formData.label,
-        tipo_id: formData.type,
-        descricao: formData.description,
-        status: formData.status,
-        usuario_alteracao_id: currentUser.id
-      };
-
-      console.log("Enviando para o Postgres (Mock):", pgData);
-
       const newTicket: Ticket = {
         ...formData,
-        id: (tickets.length + 100).toString(),
+        id: (tickets.length + 101).toString(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         lastUpdatedById: currentUser.id,
@@ -93,7 +97,7 @@ export const api = {
         ticketId: newTicket.id,
         authorId: currentUser.id,
         authorName: currentUser.name,
-        content: `Chamado #${newTicket.id} criado e registrado no banco 'teste'.`,
+        content: `Chamado #${newTicket.id} criado.`,
         type: 'STATUS_CHANGE'
       });
 
@@ -107,18 +111,6 @@ export const api = {
       if (index === -1) throw new Error("Chamado não encontrado");
 
       const oldTicket = tickets[index];
-      
-      // Mapeamento de atualização para Postgres
-      const pgUpdate = {
-        id: id,
-        ...(updates.title && { titulo: updates.title }),
-        ...(updates.status && { status: updates.status }),
-        ...(updates.assetIds && { ativo_id: updates.assetIds[0] }),
-        usuario_alteracao_id: currentUser.id
-      };
-
-      console.log(`UPDATE no Postgres tabela 'chamado' ID ${id}:`, pgUpdate);
-
       const updatedTicket = {
         ...oldTicket,
         ...updates,
@@ -135,7 +127,7 @@ export const api = {
           ticketId: id,
           authorId: currentUser.id,
           authorName: currentUser.name,
-          content: `Status alterado para "${updates.status}". Registro atualizado por ${currentUser.name}.`,
+          content: `Status alterado para "${updates.status}".`,
           type: 'STATUS_CHANGE'
         });
       }
@@ -165,16 +157,7 @@ export const api = {
   assets: {
     getAll: async (): Promise<Asset[]> => {
       await delay();
-      // Futuro: SELECT * FROM ativo
       return storage.get<Asset[]>(KEYS.ASSETS, INITIAL_ASSETS);
     }
-  },
-
-  metadata: {
-    getDbStatus: () => ({
-      connected: false,
-      target: DB_CONFIG.host,
-      database: DB_CONFIG.database
-    })
   }
 };
