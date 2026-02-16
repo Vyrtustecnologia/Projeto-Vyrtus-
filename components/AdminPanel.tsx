@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { api } from '../api';
+import { DB_CONFIG } from '../database_info';
 
 interface AdminPanelProps {
   currentUser: User;
@@ -37,7 +38,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, onUpdate }) => {
 
       await api.users.update(userId, { permissions: updatedPermissions });
       await fetchUsers();
-      onUpdate(); // Notifica App para atualizar currentUser se necessário
+      onUpdate();
     } catch (err) {
       alert("Erro ao atualizar permissões");
     } finally {
@@ -56,11 +57,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, onUpdate }) => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Privilégios de Acesso</h2>
-          <p className="text-slate-500">Configure quais telas e funcionalidades cada técnico da Vyrtus pode acessar.</p>
+          <p className="text-slate-500 text-sm">Gerenciamento centralizado de permissões da equipe técnica.</p>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-full">
+           <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></div>
+           <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">PostgreSQL: {DB_CONFIG.host} (Pendente)</span>
         </div>
       </div>
 
@@ -106,12 +111,27 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ currentUser, onUpdate }) => {
         )}
       </div>
       
-      <div className="bg-vyrtus-light p-4 rounded-xl border border-vyrtus/10 flex items-start gap-3">
-        <svg className="w-5 h-5 text-vyrtus mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        <p className="text-xs text-vyrtus-hover font-medium">
-          <strong>Aviso de Integração:</strong> Estas configurações estão sendo salvas temporariamente. 
-          A arquitetura já está preparada para sincronização com o banco PostgreSQL da Vyrtus Tecnologia.
-        </p>
+      <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-xl">
+        <h4 className="text-white text-xs font-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+           <svg className="w-4 h-4 text-vyrtus" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>
+           Dicionário de Integração (Vyrtus Tech)
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+              <div className="text-[10px] text-vyrtus font-bold mb-1">Mapeamento PostgreSQL</div>
+              <div className="text-xs text-slate-300 font-mono space-y-1">
+                 <p>Tabela: <span className="text-white">chamado</span></p>
+                 <p>Colunas: <span className="text-slate-400 italic">titulo, cliente_id, solicitante_id, ativo_id, topico_id, tipo_id, descricao</span></p>
+              </div>
+           </div>
+           <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+              <div className="text-[10px] text-vyrtus font-bold mb-1">Endpoint Alvo</div>
+              <div className="text-xs text-slate-300 font-mono">
+                 <p>Host: <span className="text-white">{DB_CONFIG.host}</span></p>
+                 <p>DB: <span className="text-white">{DB_CONFIG.database}</span></p>
+              </div>
+           </div>
+        </div>
       </div>
     </div>
   );

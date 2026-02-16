@@ -1,8 +1,11 @@
 
-import { Ticket, User, Activity, Asset, TicketStatus } from './types';
-import { INITIAL_USERS, INITIAL_ASSETS } from './constants';
+import { Ticket, User, Activity, Asset, TicketStatus, LabelType, DemandType } from './types';
+import { INITIAL_USERS, INITIAL_ASSETS, INITIAL_CLIENTS } from './constants';
+import { DB_CONFIG } from './database_info';
 
-// Chaves do LocalStorage (Substituir por endpoints de API no futuro)
+// Simula a URL do seu futuro backend que fará a ponte com o Postgres
+const API_BASE_URL = 'http://192.168.0.21:3000/api'; 
+
 const KEYS = {
   TICKETS: 'vyrtus_tickets',
   USERS: 'vyrtus_users',
@@ -10,7 +13,6 @@ const KEYS = {
   ASSETS: 'vyrtus_assets',
 };
 
-// Utilitário para simular delay de rede
 const delay = (ms = 300) => new Promise(resolve => setTimeout(resolve, ms));
 
 const storage = {
@@ -23,10 +25,15 @@ const storage = {
   }
 };
 
+/**
+ * Esta camada de API está preparada para ser substituída por chamadas fetch.
+ * Os campos foram mapeados para bater com o schema PostgreSQL fornecido.
+ */
 export const api = {
   users: {
     getAll: async (): Promise<User[]> => {
       await delay();
+      // Futuro: return fetch(`${API_BASE_URL}/users`).then(r => r.json());
       return storage.get<User[]>(KEYS.USERS, INITIAL_USERS);
     },
     update: async (id: string, updates: Partial<User>): Promise<User> => {
@@ -41,17 +48,38 @@ export const api = {
       return updatedUser;
     }
   },
+
   tickets: {
     getAll: async (): Promise<Ticket[]> => {
       await delay();
       return storage.get<Ticket[]>(KEYS.TICKETS, []);
     },
-    create: async (data: Omit<Ticket, 'id' | 'createdAt' | 'updatedAt' | 'lastUpdatedById' | 'lastUpdatedByName' | 'attachments'>, currentUser: User): Promise<Ticket> => {
+
+    create: async (formData: any, currentUser: User): Promise<Ticket> => {
       await delay();
       const tickets = storage.get<Ticket[]>(KEYS.TICKETS, []);
+      
+      /**
+       * MAPEAMENTO PARA POSTGRESQL (tabela chamado)
+       * Aqui simulamos como os dados seriam preparados para o INSERT no banco
+       */
+      const pgData = {
+        titulo: formData.title,
+        cliente_id: formData.clientId,
+        solicitante_id: formData.requesterName, // Idealmente seria um ID numérico no futuro
+        ativo_id: formData.assetIds[0] || null, // No Postgres singular conforme solicitado
+        topico_id: formData.label,
+        tipo_id: formData.type,
+        descricao: formData.description,
+        status: formData.status,
+        usuario_alteracao_id: currentUser.id
+      };
+
+      console.log("Enviando para o Postgres (Mock):", pgData);
+
       const newTicket: Ticket = {
-        ...data,
-        id: Math.random().toString(36).substr(2, 9),
+        ...formData,
+        id: (tickets.length + 100).toString(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
         lastUpdatedById: currentUser.id,
@@ -65,19 +93,32 @@ export const api = {
         ticketId: newTicket.id,
         authorId: currentUser.id,
         authorName: currentUser.name,
-        content: 'Chamado aberto no sistema.',
+        content: `Chamado #${newTicket.id} criado e registrado no banco 'teste'.`,
         type: 'STATUS_CHANGE'
       });
 
       return newTicket;
     },
-    update: async (id: string, updates: Partial<Ticket>, currentUser: User): Promise<Ticket> => {
+
+    update: async (id: string, updates: any, currentUser: User): Promise<Ticket> => {
       await delay();
       const tickets = storage.get<Ticket[]>(KEYS.TICKETS, []);
       const index = tickets.findIndex(t => t.id === id);
       if (index === -1) throw new Error("Chamado não encontrado");
 
       const oldTicket = tickets[index];
+      
+      // Mapeamento de atualização para Postgres
+      const pgUpdate = {
+        id: id,
+        ...(updates.title && { titulo: updates.title }),
+        ...(updates.status && { status: updates.status }),
+        ...(updates.assetIds && { ativo_id: updates.assetIds[0] }),
+        usuario_alteracao_id: currentUser.id
+      };
+
+      console.log(`UPDATE no Postgres tabela 'chamado' ID ${id}:`, pgUpdate);
+
       const updatedTicket = {
         ...oldTicket,
         ...updates,
@@ -94,7 +135,7 @@ export const api = {
           ticketId: id,
           authorId: currentUser.id,
           authorName: currentUser.name,
-          content: `Status alterado de "${oldTicket.status}" para "${updates.status}".`,
+          content: `Status alterado para "${updates.status}". Registro atualizado por ${currentUser.name}.`,
           type: 'STATUS_CHANGE'
         });
       }
@@ -102,6 +143,7 @@ export const api = {
       return updatedTicket;
     }
   },
+
   activities: {
     getByTicket: async (ticketId: string): Promise<Activity[]> => {
       await delay(100);
@@ -119,10 +161,20 @@ export const api = {
       return newActivity;
     }
   },
+
   assets: {
     getAll: async (): Promise<Asset[]> => {
       await delay();
+      // Futuro: SELECT * FROM ativo
       return storage.get<Asset[]>(KEYS.ASSETS, INITIAL_ASSETS);
     }
+  },
+
+  metadata: {
+    getDbStatus: () => ({
+      connected: false,
+      target: DB_CONFIG.host,
+      database: DB_CONFIG.database
+    })
   }
 };
